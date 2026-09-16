@@ -18,8 +18,8 @@ from pathlib import Path
 
 from sqlalchemy import text
 
-from app.db import session_scope
 from app.db import repository as repo
+from app.db import session_scope
 from app.llm import get_embedder
 from app.obs import get_logger
 from app.rag.chunker import chunk_transcript
@@ -125,7 +125,7 @@ async def ingest_directory(
                     "token_estimate": c.token_estimate,
                     "embedding": vec,
                 }
-                for c, vec in zip(chunks, vectors)
+                for c, vec in zip(chunks, vectors, strict=False)
             ]
             async with session_scope() as db:
                 written = await repo.insert_chunks(db, transcript_id, payload)

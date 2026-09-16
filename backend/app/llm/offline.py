@@ -11,7 +11,8 @@ from __future__ import annotations
 import hashlib
 import math
 import re
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 from app.config import settings
 from app.llm.base import ChatMessage, CompletionResult

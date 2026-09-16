@@ -9,8 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
-from app.api import api_router
-from app.api import errors
+from app.api import api_router, errors
 from app.config import settings
 from app.db.bootstrap import apply_migrations
 from app.db.engine import get_engine

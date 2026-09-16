@@ -16,8 +16,14 @@ from app.db import repository as repo
 from app.llm import get_chat_provider
 from app.obs import get_logger, new_trace
 from app.rag.retriever import retrieve
-from app.schemas import ArtifactOut, ChatRequest, ChatResponse, MessageOut, \
-    SearchRequest, SearchResponse
+from app.schemas import (
+    ArtifactOut,
+    ChatRequest,
+    ChatResponse,
+    MessageOut,
+    SearchRequest,
+    SearchResponse,
+)
 
 log = get_logger("api.chat")
 router = APIRouter(tags=["chat"])

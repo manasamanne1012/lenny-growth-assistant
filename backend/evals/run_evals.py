@@ -21,7 +21,7 @@ import asyncio
 import json
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -255,7 +255,7 @@ async def main_async(args) -> int:
     print(render(summary, results))
 
     RESULTS_DIR.mkdir(exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     out = RESULTS_DIR / f"{stamp}-{settings.chat_provider}.json"
     out.write_text(
         json.dumps(

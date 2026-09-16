@@ -11,9 +11,8 @@ import asyncio
 import sys
 
 from app.config import settings
-from app.db import ping
+from app.db import ping, session_scope
 from app.db import repository as repo
-from app.db import session_scope
 from app.llm import provider_health
 
 GREEN, RED, YELLOW, RESET = "\033[32m", "\033[31m", "\033[33m", "\033[0m"

@@ -71,5 +71,5 @@ async def _align_embedding_dim() -> None:
             "db.embedding_dim.mismatch",
             column_dim=typmod,
             configured_dim=settings.embedding_dim,
-            fix="make resize-embeddings DIM=%d && make ingest" % settings.embedding_dim,
+            fix=f"make resize-embeddings DIM={settings.embedding_dim} && make ingest",
         )
