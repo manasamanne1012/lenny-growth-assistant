@@ -1,0 +1,9 @@
+-r requirements.txt
+
+pytest==8.3.4
+pytest-asyncio==0.25.0
+ruff==0.8.6
+
+# Optional: the Claude Agent SDK runtime (AGENT_RUNTIME=claude_sdk).
+# Left out of requirements.txt so the default local demo has no cloud dependency.
+# claude-agent-sdk>=0.1.0

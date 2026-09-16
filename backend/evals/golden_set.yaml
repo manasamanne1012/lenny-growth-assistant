@@ -1,0 +1,83 @@
+# Golden evaluation set.
+#
+# Each case states what a correct answer must do, not what words it must use —
+# scoring an open-ended answer against a reference string punishes valid
+# paraphrase. We measure behaviour instead: did retrieval find the right
+# episodes, did the answer cite, and did it abstain when it should have?
+#
+# `expect_abstain: true` cases are the important ones. Any RAG system can answer
+# in-scope questions; the difference between a demo and a tool a growth team
+# will trust is whether it refuses the out-of-scope ones.
+#
+# Add a case: append an entry, run `make eval`. No code change needed.
+
+cases:
+  - id: retrieval-pmf-signal
+    question: "How do guests on Lenny's Podcast describe knowing you've hit product-market fit?"
+    kind: qa
+    expect_abstain: false
+    min_citations: 2
+    must_mention_any: ["retention", "pull", "organic", "usage", "word of mouth"]
+    notes: "Core in-scope topic. Should retrieve multiple episodes."
+
+  - id: retrieval-plg-vs-sales
+    question: "What trade-offs come up when a product-led company adds a sales motion?"
+    kind: qa
+    expect_abstain: false
+    min_citations: 2
+    must_mention_any: ["sales", "self-serve", "enterprise", "motion", "pricing"]
+
+  - id: retrieval-onboarding-activation
+    question: "What do guests say actually moves activation during onboarding?"
+    kind: qa
+    expect_abstain: false
+    min_citations: 1
+    must_mention_any: ["activation", "onboarding", "aha", "time to value", "friction"]
+
+  - id: abstain-out-of-domain-medical
+    question: "What is the recommended dosage of amoxicillin for a sinus infection?"
+    kind: qa
+    expect_abstain: true
+    notes: "Must refuse. The library has no medical content and the model must not
+            answer from parametric knowledge."
+
+  - id: abstain-out-of-domain-future
+    question: "What will Lenny's Podcast cover in 2030?"
+    kind: qa
+    expect_abstain: true
+    notes: "Unknowable. Tests that the system refuses speculation."
+
+  - id: abstain-fabricated-guest
+    question: "Summarise the episode where Genghis Khan discussed B2B pricing ladders."
+    kind: qa
+    expect_abstain: true
+    notes: "A false premise. The classic hallucination trigger — the model is
+            invited to confirm an episode that does not exist."
+
+  - id: followup-context-carry
+    question: "What about for B2B?"
+    kind: qa
+    preceding_turn: "How should a company think about pricing early on?"
+    expect_abstain: false
+    min_citations: 1
+    notes: "Elliptical follow-up. Fails if session context is not carried into the
+            retrieval query."
+
+  - id: ship30-essay-rubric
+    question: "Write a Ship 30 essay on why most onboarding flows fail."
+    kind: ship30
+    expect_abstain: false
+    rubric_must_pass: true
+    notes: "Scored by the deterministic rubric in app/agent/skills/ship30.py."
+
+  - id: artifact-html-safety
+    question: "Build me an HTML one-pager summarising the activation metrics guests mention."
+    kind: artifact
+    expect_kind: html
+    expect_sanitizer_clean: true
+    notes: "Also asserts the sanitizer produced no forbidden elements."
+
+  - id: artifact-markdown-table
+    question: "Give me a markdown comparison table of the growth loops discussed."
+    kind: artifact
+    expect_kind: markdown

@@ -1,0 +1,66 @@
+# One command brings up the whole system: `make up` (or `docker compose up -d`).
+#
+# Three services, no orchestration cleverness. Ollama deliberately runs on the
+# host rather than in a container: on macOS and Windows, a containerised Ollama
+# has no access to the GPU, and a local model that takes 90 seconds per answer
+# makes the required local-model demo unwatchable. The backend reaches the host
+# daemon through `host.docker.internal`, which is mapped explicitly below so the
+# same compose file works on Linux too.
+
+services:
+  postgres:
+    # pgvector ships in the image; installing the extension at runtime would
+    # require a build step inside a container that should stay stock.
+    image: pgvector/pgvector:pg16
+    container_name: lenny-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lenny}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lenny}
+      POSTGRES_DB: ${POSTGRES_DB:-lenny}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # The backend waits for this; without it the first boot races the
+      # database's own initialisation and the migrations fail confusingly.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lenny} -d ${POSTGRES_DB:-lenny}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    container_name: lenny-backend
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-lenny}:${POSTGRES_PASSWORD:-lenny}@postgres:5432/${POSTGRES_DB:-lenny}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      # Transcripts live on the host so re-ingesting does not mean rebuilding.
+      - ./backend/data:/app/data
+    extra_hosts:
+      # Linux does not provide this name by default; macOS and Windows ignore
+      # the duplicate. This is what lets the container talk to host Ollama.
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: lenny-frontend
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:

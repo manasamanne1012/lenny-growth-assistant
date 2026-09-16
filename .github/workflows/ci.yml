@@ -1,0 +1,84 @@
+# CI runs entirely offline.
+#
+# CHAT_PROVIDER=echo and EMBEDDING_PROVIDER=hash swap in deterministic local
+# stubs, so the suite exercises routing, chunking, sanitization, grounding
+# logic, and the API contract without an API key, a GPU, or a network call.
+# That is the point: the parts of this system most likely to break silently are
+# the deterministic ones, and they should be testable in twenty seconds.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      CHAT_PROVIDER: echo
+      EMBEDDING_PROVIDER: hash
+      EMBEDDING_DIM: 256
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Lint
+        working-directory: backend
+        run: python -m ruff check app evals scripts tests
+      - name: Test
+        working-directory: backend
+        run: python -m pytest -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package.json
+      - name: Install
+        working-directory: frontend
+        run: npm install
+      - name: Type-check and build
+        working-directory: frontend
+        run: npm run build
+
+  compose:
+    # A README that says "one command" should be tested by the same command.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Boot the stack
+        run: |
+          cp .env.example .env
+          # CI has no Ollama; use the offline providers so the boot is a real
+          # test of compose, migrations, and health rather than of model access.
+          sed -i 's/^CHAT_PROVIDER=.*/CHAT_PROVIDER=echo/' .env
+          sed -i 's/^EMBEDDING_PROVIDER=.*/EMBEDDING_PROVIDER=hash/' .env
+          docker compose up -d --build
+      - name: Wait for health
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS http://localhost:8000/api/health/deep; then exit 0; fi
+            sleep 3
+          done
+          docker compose logs backend
+          exit 1
+      - name: Ingest the bundled samples and run the evals
+        run: |
+          docker compose exec -T backend python -m app.rag.ingest \
+            --source ./data/sample_transcripts
+          docker compose exec -T backend python -m evals.run_evals --threshold 0.6
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
